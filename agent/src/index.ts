@@ -382,18 +382,16 @@ async function startAgent(character: Character, directClient) {
             fs.mkdirSync(dataDir, { recursive: true });
         }
 
-        db = initializeDatabase(dataDir) as IDatabaseAdapter &
-            IDatabaseCacheAdapter;
+        db = initializeDatabase(dataDir) as IDatabaseAdapter & IDatabaseCacheAdapter;
 
+        // Initialize and test connection
         await db.init();
 
         const cache = intializeDbCache(character, db);
         const runtime = createAgent(character, db, cache, token);
 
         await runtime.initialize();
-
         const clients = await initializeClients(character, runtime);
-
         directClient.registerAgent(runtime);
 
         return clients;
@@ -402,9 +400,12 @@ async function startAgent(character: Character, directClient) {
             `Error starting agent for character ${character.name}:`,
             error
         );
-        console.error(error);
         if (db) {
-            await db.close();
+            try {
+                await db.close();
+            } catch (closeError) {
+                elizaLogger.error("Error closing database connection:", closeError);
+            }
         }
         throw error;
     }
@@ -490,3 +491,20 @@ async function gracefulExit() {
 
 rl.on("SIGINT", gracefulExit);
 rl.on("SIGTERM", gracefulExit);
+
+// Add cleanup handlers
+const cleanup = async () => {
+    let db: IDatabaseAdapter & IDatabaseCacheAdapter;
+    elizaLogger.info("Cleaning up...");
+    if (db) {
+        try {
+            await db.close();
+        } catch (error) {
+            elizaLogger.error("Error during cleanup:", error);
+        }
+    }
+    process.exit(0);
+};
+
+process.on('SIGTERM', cleanup);
+process.on('SIGINT', cleanup);
