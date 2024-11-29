@@ -369,8 +369,9 @@ function intializeDbCache(character: Character, db: IDatabaseCacheAdapter) {
     return cache;
 }
 
-// Create a global database reference
+// Create a global database reference with a connection state
 let globalDb: IDatabaseAdapter & IDatabaseCacheAdapter;
+let isClosing = false;
 
 async function startAgent(character: Character, directClient) {
     try {
@@ -408,40 +409,38 @@ async function startAgent(character: Character, directClient) {
     }
 }
 
-// Shared cleanup function
+// Shared cleanup function with state check
 async function cleanupDatabase() {
-    if (globalDb) {
-        try {
-            await globalDb.close();
-            globalDb = undefined; // Clear the reference after closing
-            elizaLogger.info("Database connection closed successfully");
-        } catch (closeError) {
-            elizaLogger.error("Error closing database connection:", closeError);
-        }
+    if (!globalDb || isClosing) {
+        return;
+    }
+
+    isClosing = true;
+    try {
+        await globalDb.close();
+        globalDb = undefined;
+        elizaLogger.info("Database connection closed successfully");
+    } catch (closeError) {
+        elizaLogger.error("Error closing database connection:", closeError);
+    } finally {
+        isClosing = false;
     }
 }
 
-// Update cleanup handler
+// Update cleanup handler to prevent multiple calls
 const cleanup = async (signal?: string) => {
+    if (isClosing) {
+        return;
+    }
+
     elizaLogger.info(`Cleaning up... ${signal ? `Signal: ${signal}` : ''}`);
     await cleanupDatabase();
-    process.exit(0);
+
+    // Only exit if we're not already in an error state
+    if (!process.exitCode) {
+        process.exit(0);
+    }
 };
-
-// Update process handlers
-process.on('SIGTERM', () => cleanup('SIGTERM'));
-process.on('SIGINT', () => cleanup('SIGINT'));
-process.on('SIGUSR2', () => cleanup('SIGUSR2')); // Handle nodemon restarts
-process.on('beforeExit', () => cleanup('beforeExit'));
-process.on('exit', () => cleanup('exit'));
-
-// Update graceful exit
-async function gracefulExit() {
-    elizaLogger.log("Terminating and cleaning up resources...");
-    await cleanupDatabase();
-    rl.close();
-    process.exit(0);
-}
 
 // Update error handler in startAgents
 const startAgents = async () => {
@@ -455,40 +454,53 @@ const startAgents = async () => {
             await startAgent(character, directClient);
         }
 
-        function chat() {
-            const agentId = characters[0].name ?? "Agent";
-            rl.question("You: ", async (input) => {
-                await handleUserInput(input, agentId);
-                if (input.toLowerCase() !== "exit") {
-                    chat();
-                }
-            });
-        }
+        // Set up chat interface after successful initialization
+        setupChatInterface(characters[0].name);
 
-        elizaLogger.log("Chat started. Type 'exit' to quit.");
-        chat();
+        // Add error handler for uncaught promise rejections
+        process.on('unhandledRejection', async (error) => {
+            elizaLogger.error("Unhandled promise rejection:", error);
+            process.exitCode = 1;
+            await cleanup('unhandledRejection');
+        });
+
     } catch (error) {
         elizaLogger.error("Error starting agents:", error);
-        await cleanupDatabase();
-        process.exit(1);
+        process.exitCode = 1;
+        await cleanup();
     }
 };
 
 // Update the main error handler
 startAgents().catch(async (error) => {
     elizaLogger.error("Unhandled error in startAgents:", error);
-    await cleanupDatabase();
-    process.exit(1);
+    process.exitCode = 1;
+    await cleanup();
 });
+
+// Process handlers with state check
+process.on('SIGTERM', () => !isClosing && cleanup('SIGTERM'));
+process.on('SIGINT', () => !isClosing && cleanup('SIGINT'));
+process.on('SIGUSR2', () => !isClosing && cleanup('SIGUSR2'));
+process.on('beforeExit', () => !isClosing && cleanup('beforeExit'));
+process.on('exit', () => !isClosing && cleanup('exit'));
 
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
 });
 
+async function gracefulExit() {
+    elizaLogger.log("Terminating and cleaning up resources...");
+    rl.close();
+    await cleanup('gracefulExit');
+}
+
+// Update handleUserInput to properly await gracefulExit
 async function handleUserInput(input, agentId) {
     if (input.toLowerCase() === "exit") {
-        gracefulExit();
+        await gracefulExit();
+        return;
     }
 
     try {
@@ -512,4 +524,20 @@ async function handleUserInput(input, agentId) {
     } catch (error) {
         console.error("Error fetching response:", error);
     }
+}
+
+// Update setupChatInterface to handle graceful exit
+function setupChatInterface(agentId: string) {
+    elizaLogger.log("Chat started. Type 'exit' to quit.");
+
+    function chat() {
+        rl.question("You: ", async (input) => {
+            await handleUserInput(input, agentId);
+            if (input.toLowerCase() !== "exit") {
+                chat();
+            }
+        });
+    }
+
+    chat();
 }
