@@ -369,8 +369,10 @@ function intializeDbCache(character: Character, db: IDatabaseCacheAdapter) {
     return cache;
 }
 
+// Create a global database reference
+let globalDb: IDatabaseAdapter & IDatabaseCacheAdapter;
+
 async function startAgent(character: Character, directClient) {
-    let db: IDatabaseAdapter & IDatabaseCacheAdapter;
     try {
         character.id ??= stringToUuid(character.name);
         character.username ??= character.name;
@@ -382,13 +384,14 @@ async function startAgent(character: Character, directClient) {
             fs.mkdirSync(dataDir, { recursive: true });
         }
 
-        db = initializeDatabase(dataDir) as IDatabaseAdapter & IDatabaseCacheAdapter;
+        // Use the global database instance if it exists, otherwise create new one
+        if (!globalDb) {
+            globalDb = initializeDatabase(dataDir) as IDatabaseAdapter & IDatabaseCacheAdapter;
+            await globalDb.init();
+        }
 
-        // Initialize and test connection
-        await db.init();
-
-        const cache = intializeDbCache(character, db);
-        const runtime = createAgent(character, db, cache, token);
+        const cache = intializeDbCache(character, globalDb);
+        const runtime = createAgent(character, globalDb, cache, token);
 
         await runtime.initialize();
         const clients = await initializeClients(character, runtime);
@@ -400,54 +403,82 @@ async function startAgent(character: Character, directClient) {
             `Error starting agent for character ${character.name}:`,
             error
         );
-        if (db) {
-            try {
-                await db.close();
-            } catch (closeError) {
-                elizaLogger.error("Error closing database connection:", closeError);
-            }
-        }
+        await cleanupDatabase(); // Use the shared cleanup function
         throw error;
     }
 }
 
-const startAgents = async () => {
-    const directClient = await DirectClientInterface.start();
-    const args = parseArguments();
-
-    let charactersArg = args.characters || args.character;
-
-    let characters = [defaultCharacter];
-
-    if (charactersArg) {
-        characters = await loadCharacters(charactersArg);
+// Shared cleanup function
+async function cleanupDatabase() {
+    if (globalDb) {
+        try {
+            await globalDb.close();
+            globalDb = undefined; // Clear the reference after closing
+            elizaLogger.info("Database connection closed successfully");
+        } catch (closeError) {
+            elizaLogger.error("Error closing database connection:", closeError);
+        }
     }
+}
 
+// Update cleanup handler
+const cleanup = async (signal?: string) => {
+    elizaLogger.info(`Cleaning up... ${signal ? `Signal: ${signal}` : ''}`);
+    await cleanupDatabase();
+    process.exit(0);
+};
+
+// Update process handlers
+process.on('SIGTERM', () => cleanup('SIGTERM'));
+process.on('SIGINT', () => cleanup('SIGINT'));
+process.on('SIGUSR2', () => cleanup('SIGUSR2')); // Handle nodemon restarts
+process.on('beforeExit', () => cleanup('beforeExit'));
+process.on('exit', () => cleanup('exit'));
+
+// Update graceful exit
+async function gracefulExit() {
+    elizaLogger.log("Terminating and cleaning up resources...");
+    await cleanupDatabase();
+    rl.close();
+    process.exit(0);
+}
+
+// Update error handler in startAgents
+const startAgents = async () => {
     try {
+        const directClient = await DirectClientInterface.start();
+        const args = parseArguments();
+        let charactersArg = args.characters || args.character;
+        let characters = charactersArg ? await loadCharacters(charactersArg) : [defaultCharacter];
+
         for (const character of characters) {
             await startAgent(character, directClient);
         }
+
+        function chat() {
+            const agentId = characters[0].name ?? "Agent";
+            rl.question("You: ", async (input) => {
+                await handleUserInput(input, agentId);
+                if (input.toLowerCase() !== "exit") {
+                    chat();
+                }
+            });
+        }
+
+        elizaLogger.log("Chat started. Type 'exit' to quit.");
+        chat();
     } catch (error) {
         elizaLogger.error("Error starting agents:", error);
+        await cleanupDatabase();
+        process.exit(1);
     }
-
-    function chat() {
-        const agentId = characters[0].name ?? "Agent";
-        rl.question("You: ", async (input) => {
-            await handleUserInput(input, agentId);
-            if (input.toLowerCase() !== "exit") {
-                chat(); // Loop back to ask another question
-            }
-        });
-    }
-
-    elizaLogger.log("Chat started. Type 'exit' to quit.");
-    chat();
 };
 
-startAgents().catch((error) => {
+// Update the main error handler
+startAgents().catch(async (error) => {
     elizaLogger.error("Unhandled error in startAgents:", error);
-    process.exit(1); // Exit the process after logging
+    await cleanupDatabase();
+    process.exit(1);
 });
 
 const rl = readline.createInterface({
@@ -482,29 +513,3 @@ async function handleUserInput(input, agentId) {
         console.error("Error fetching response:", error);
     }
 }
-
-async function gracefulExit() {
-    elizaLogger.log("Terminating and cleaning up resources...");
-    rl.close();
-    process.exit(0);
-}
-
-rl.on("SIGINT", gracefulExit);
-rl.on("SIGTERM", gracefulExit);
-
-// Add cleanup handlers
-const cleanup = async () => {
-    let db: IDatabaseAdapter & IDatabaseCacheAdapter;
-    elizaLogger.info("Cleaning up...");
-    if (db) {
-        try {
-            await db.close();
-        } catch (error) {
-            elizaLogger.error("Error during cleanup:", error);
-        }
-    }
-    process.exit(0);
-};
-
-process.on('SIGTERM', cleanup);
-process.on('SIGINT', cleanup);
