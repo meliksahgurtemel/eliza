@@ -413,14 +413,8 @@ function intializeDbCache(character: Character, db: IDatabaseCacheAdapter) {
     return cache;
 }
 
-<<<<<<< HEAD
-=======
-// Create a global database reference with a connection state
->>>>>>> 853663c7 (fix)
-let globalDb: IDatabaseAdapter & IDatabaseCacheAdapter;
-let isClosing = false;
-
-export async function startAgent(character: Character, directClient) {
+async function startAgent(character: Character, directClient) {
+    let db: IDatabaseAdapter & IDatabaseCacheAdapter;
     try {
         character.id ??= stringToUuid(character.name);
         character.username ??= character.name;
@@ -432,17 +426,18 @@ export async function startAgent(character: Character, directClient) {
             fs.mkdirSync(dataDir, { recursive: true });
         }
 
-        // Initialize database if not already initialized
-        if (!globalDb) {
-            globalDb = initializeDatabase(dataDir) as IDatabaseAdapter & IDatabaseCacheAdapter;
-            await globalDb.init();
-        }
+        db = initializeDatabase(dataDir) as IDatabaseAdapter &
+            IDatabaseCacheAdapter;
 
-        const cache = intializeDbCache(character, globalDb);
-        const runtime = createAgent(character, globalDb, cache, token);
+        await db.init();
+
+        const cache = intializeDbCache(character, db);
+        const runtime = createAgent(character, db, cache, token);
 
         await runtime.initialize();
+
         const clients = await initializeClients(character, runtime);
+
         directClient.registerAgent(runtime);
 
         return clients;
@@ -451,61 +446,32 @@ export async function startAgent(character: Character, directClient) {
             `Error starting agent for character ${character.name}:`,
             error
         );
+        console.error(error);
+        if (db) {
+            await db.close();
+        }
         throw error;
     }
 }
 
-// Shared cleanup function with state check
-async function cleanupDatabase() {
-    if (!globalDb || isClosing) {
-        return;
-    }
-
-    isClosing = true;
-    try {
-        await globalDb.close();
-        globalDb = undefined;
-        elizaLogger.info("Database connection closed successfully");
-    } catch (closeError) {
-        elizaLogger.error("Error closing database connection:", closeError);
-    } finally {
-        isClosing = false;
-    }
-}
-
-// Update process handlers
-process.on('SIGTERM', () => cleanup('SIGTERM'));
-process.on('SIGINT', () => cleanup('SIGINT'));
-process.on('SIGUSR2', () => cleanup('SIGUSR2')); // Handle nodemon restarts
-process.on('beforeExit', () => cleanup('beforeExit'));
-process.on('exit', () => cleanup('exit'));
-
-// Update error handler in startAgents
 const startAgents = async () => {
-    try {
-        const directClient = await DirectClientInterface.start();
-        const args = parseArguments();
-        let charactersArg = args.characters || args.character;
-        let characters = charactersArg ? await loadCharacters(charactersArg) : [defaultCharacter];
+    const directClient = await DirectClientInterface.start();
+    const args = parseArguments();
 
+    let charactersArg = args.characters || args.character;
+
+    let characters = [defaultCharacter];
+
+    if (charactersArg) {
+        characters = await loadCharacters(charactersArg);
+    }
+
+    try {
         for (const character of characters) {
             await startAgent(character, directClient);
         }
-
-        // Set up chat interface after successful initialization
-        setupChatInterface(characters[0].name);
-
-        // Add error handler for uncaught promise rejections
-        process.on('unhandledRejection', async (error) => {
-            elizaLogger.error("Unhandled promise rejection:", error);
-            process.exitCode = 1;
-            await cleanup('unhandledRejection');
-        });
-
     } catch (error) {
         elizaLogger.error("Error starting agents:", error);
-        process.exitCode = 1;
-        await cleanup();
     }
 
     function chat() {
@@ -524,64 +490,19 @@ const startAgents = async () => {
     }
 };
 
-// Add connection state tracking
-let isShuttingDown = false;
-
-// Update cleanup handler
-const cleanup = async (signal?: string) => {
-    if (isShuttingDown) {
-        return;
-    }
-
-    isShuttingDown = true;
-    elizaLogger.info(`Cleaning up... ${signal ? `Signal: ${signal}` : ''}`);
-
-    try {
-        if (globalDb) {
-            await globalDb.close();
-            elizaLogger.info("Database connection closed successfully");
-        }
-    } catch (error) {
-        elizaLogger.error("Error during cleanup:", error);
-    }
-
-    // Only exit if explicitly requested
-    if (signal) {
-        process.exit(0);
-    }
-};
-
-// Update process handlers
-process.on('SIGTERM', () => cleanup('SIGTERM'));
-process.on('SIGINT', () => cleanup('SIGINT'));
-process.on('beforeExit', () => cleanup('beforeExit'));
-
-// Update the main error handler
-startAgents().catch(async (error) => {
+startAgents().catch((error) => {
     elizaLogger.error("Unhandled error in startAgents:", error);
-    if (!isShuttingDown) {
-        await cleanup();
-        process.exit(1);
-    }
+    process.exit(1); // Exit the process after logging
 });
-
-// Process handlers with state check
-process.on('SIGTERM', () => !isClosing && cleanup('SIGTERM'));
-process.on('SIGINT', () => !isClosing && cleanup('SIGINT'));
-process.on('SIGUSR2', () => !isClosing && cleanup('SIGUSR2'));
-process.on('beforeExit', () => !isClosing && cleanup('beforeExit'));
-process.on('exit', () => !isClosing && cleanup('exit'));
 
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
 });
 
-// Update handleUserInput to properly await gracefulExit
 async function handleUserInput(input, agentId) {
     if (input.toLowerCase() === "exit") {
-        await gracefulExit();
-        return;
+        gracefulExit();
     }
 
     try {
@@ -617,6 +538,3 @@ async function gracefulExit() {
 
 rl.on("SIGINT", gracefulExit);
 rl.on("SIGTERM", gracefulExit);
-
-process.on('SIGTERM', cleanup);
-process.on('SIGINT', cleanup);
