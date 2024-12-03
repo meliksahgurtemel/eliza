@@ -903,6 +903,7 @@ importers:
         specifier: workspace:*
         version: link:../core
       '@dfinity/agent':
+<<<<<<< HEAD
         specifier: 2.1.3
         version: 2.1.3(@dfinity/candid@2.1.3(@dfinity/principal@2.1.3))(@dfinity/principal@2.1.3)
       '@dfinity/candid':
@@ -913,6 +914,18 @@ importers:
         version: 2.1.3(@dfinity/agent@2.1.3(@dfinity/candid@2.1.3(@dfinity/principal@2.1.3))(@dfinity/principal@2.1.3))(@dfinity/principal@2.1.3)(@peculiar/webcrypto@1.5.0)
       '@dfinity/principal':
         specifier: 2.1.3
+=======
+        specifier: ^2.1.3
+        version: 2.1.3(@dfinity/candid@2.1.3(@dfinity/principal@2.1.3))(@dfinity/principal@2.1.3)
+      '@dfinity/candid':
+        specifier: ^2.1.3
+        version: 2.1.3(@dfinity/principal@2.1.3)
+      '@dfinity/identity':
+        specifier: ^2.1.3
+        version: 2.1.3(@dfinity/agent@2.1.3(@dfinity/candid@2.1.3(@dfinity/principal@2.1.3))(@dfinity/principal@2.1.3))(@dfinity/principal@2.1.3)(@peculiar/webcrypto@1.5.0)
+      '@dfinity/principal':
+        specifier: ^2.1.3
+>>>>>>> e77a57e1059fa24d4836fa8095b1385997f1e0fd
         version: 2.1.3
     devDependencies:
       '@types/jest':
@@ -922,7 +935,11 @@ importers:
         specifier: 29.7.0
         version: 29.7.0(@types/node@22.8.4)
       tsup:
+<<<<<<< HEAD
         specifier: 8.3.5
+=======
+        specifier: ^8.3.5
+>>>>>>> e77a57e1059fa24d4836fa8095b1385997f1e0fd
         version: 8.3.5(@swc/core@1.9.3(@swc/helpers@0.5.15))(jiti@2.4.0)(postcss@8.4.49)(typescript@5.6.3)(yaml@2.6.1)
       typescript:
         specifier: 5.6.3
@@ -1270,6 +1287,18 @@ importers:
         version: link:../core
       tsup:
         specifier: 8.3.5
+        version: 8.3.5(@swc/core@1.9.3(@swc/helpers@0.5.15))(jiti@2.4.0)(postcss@8.4.49)(typescript@5.6.3)(yaml@2.6.1)
+      whatwg-url:
+        specifier: 7.1.0
+        version: 7.1.0
+
+  packages/plugin-web-search:
+    dependencies:
+      '@ai16z/eliza':
+        specifier: workspace:*
+        version: link:../core
+      tsup:
+        specifier: ^8.3.5
         version: 8.3.5(@swc/core@1.9.3(@swc/helpers@0.5.15))(jiti@2.4.0)(postcss@8.4.49)(typescript@5.6.3)(yaml@2.6.1)
       whatwg-url:
         specifier: 7.1.0
@@ -14668,6 +14697,9 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
+  tslib@2.8.1:
+    resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
+
   tslog@4.9.3:
     resolution: {integrity: sha512-oDWuGVONxhVEBtschLf2cs/Jy8i7h1T+CpdkTNWQgdAF7DhRo2G8vMCgILKe7ojdEkLhICWgI1LYSSKaJsRgcw==}
     engines: {node: '>=16'}
@@ -20436,18 +20468,30 @@ snapshots:
     dependencies:
       asn1js: 3.0.5
       pvtsutils: 1.3.6
+<<<<<<< HEAD
       tslib: 2.8.1
 
   '@peculiar/json-schema@1.1.12':
     dependencies:
       tslib: 2.8.1
+=======
+      tslib: 2.8.0
+
+  '@peculiar/json-schema@1.1.12':
+    dependencies:
+      tslib: 2.8.0
+>>>>>>> e77a57e1059fa24d4836fa8095b1385997f1e0fd
 
   '@peculiar/webcrypto@1.5.0':
     dependencies:
       '@peculiar/asn1-schema': 2.3.13
       '@peculiar/json-schema': 1.1.12
       pvtsutils: 1.3.6
+<<<<<<< HEAD
       tslib: 2.8.1
+=======
+      tslib: 2.8.0
+>>>>>>> e77a57e1059fa24d4836fa8095b1385997f1e0fd
       webcrypto-core: 1.8.1
 
   '@phala/dstack-sdk@0.1.4(bufferutil@4.0.8)(typescript@5.6.3)(utf-8-validate@5.0.10)(zod@3.23.8)':
@@ -23123,7 +23167,11 @@ snapshots:
     dependencies:
       pvtsutils: 1.3.6
       pvutils: 1.1.3
+<<<<<<< HEAD
       tslib: 2.8.1
+=======
+      tslib: 2.8.0
+>>>>>>> e77a57e1059fa24d4836fa8095b1385997f1e0fd
 
   assert-plus@1.0.0: {}
 
@@ -25678,7 +25726,7 @@ snapshots:
 
   extract-zip@2.0.1:
     dependencies:
-      debug: 4.3.4
+      debug: 4.3.7(supports-color@5.5.0)
       get-stream: 5.2.0
       yauzl: 2.10.0
     optionalDependencies:
@@ -32875,6 +32923,8 @@ snapshots:
 
   tslib@2.8.1: {}
 
+  tslib@2.8.1: {}
+
   tslog@4.9.3: {}
 
   tsup@8.3.5(@swc/core@1.9.3(@swc/helpers@0.5.15))(jiti@2.4.0)(postcss@8.4.49)(typescript@5.6.3)(yaml@2.6.1):
@@ -33589,7 +33639,11 @@ snapshots:
       '@peculiar/json-schema': 1.1.12
       asn1js: 3.0.5
       pvtsutils: 1.3.6
+<<<<<<< HEAD
       tslib: 2.8.1
+=======
+      tslib: 2.8.0
+>>>>>>> e77a57e1059fa24d4836fa8095b1385997f1e0fd
 
   webidl-conversions@3.0.1: {}
 
