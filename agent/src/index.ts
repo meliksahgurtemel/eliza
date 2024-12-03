@@ -413,7 +413,12 @@ function intializeDbCache(character: Character, db: IDatabaseCacheAdapter) {
     return cache;
 }
 
+<<<<<<< HEAD
+=======
+// Create a global database reference with a connection state
+>>>>>>> 853663c7 (fix)
 let globalDb: IDatabaseAdapter & IDatabaseCacheAdapter;
+let isClosing = false;
 
 export async function startAgent(character: Character, directClient) {
     try {
@@ -450,16 +455,21 @@ export async function startAgent(character: Character, directClient) {
     }
 }
 
-// Shared cleanup function
+// Shared cleanup function with state check
 async function cleanupDatabase() {
-    if (globalDb) {
-        try {
-            await globalDb.close();
-            globalDb = undefined; // Clear the reference after closing
-            elizaLogger.info("Database connection closed successfully");
-        } catch (closeError) {
-            elizaLogger.error("Error closing database connection:", closeError);
-        }
+    if (!globalDb || isClosing) {
+        return;
+    }
+
+    isClosing = true;
+    try {
+        await globalDb.close();
+        globalDb = undefined;
+        elizaLogger.info("Database connection closed successfully");
+    } catch (closeError) {
+        elizaLogger.error("Error closing database connection:", closeError);
+    } finally {
+        isClosing = false;
     }
 }
 
@@ -482,22 +492,20 @@ const startAgents = async () => {
             await startAgent(character, directClient);
         }
 
-        function chat() {
-            const agentId = characters[0].name ?? "Agent";
-            rl.question("You: ", async (input) => {
-                await handleUserInput(input, agentId);
-                if (input.toLowerCase() !== "exit") {
-                    chat();
-                }
-            });
-        }
+        // Set up chat interface after successful initialization
+        setupChatInterface(characters[0].name);
 
-        elizaLogger.log("Chat started. Type 'exit' to quit.");
-        chat();
+        // Add error handler for uncaught promise rejections
+        process.on('unhandledRejection', async (error) => {
+            elizaLogger.error("Unhandled promise rejection:", error);
+            process.exitCode = 1;
+            await cleanup('unhandledRejection');
+        });
+
     } catch (error) {
         elizaLogger.error("Error starting agents:", error);
-        await cleanupDatabase();
-        process.exit(1);
+        process.exitCode = 1;
+        await cleanup();
     }
 
     function chat() {
@@ -557,14 +565,23 @@ startAgents().catch(async (error) => {
     }
 });
 
+// Process handlers with state check
+process.on('SIGTERM', () => !isClosing && cleanup('SIGTERM'));
+process.on('SIGINT', () => !isClosing && cleanup('SIGINT'));
+process.on('SIGUSR2', () => !isClosing && cleanup('SIGUSR2'));
+process.on('beforeExit', () => !isClosing && cleanup('beforeExit'));
+process.on('exit', () => !isClosing && cleanup('exit'));
+
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
 });
 
+// Update handleUserInput to properly await gracefulExit
 async function handleUserInput(input, agentId) {
     if (input.toLowerCase() === "exit") {
-        gracefulExit();
+        await gracefulExit();
+        return;
     }
 
     try {
