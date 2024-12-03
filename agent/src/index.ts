@@ -570,3 +570,6 @@ async function gracefulExit() {
 
 rl.on("SIGINT", gracefulExit);
 rl.on("SIGTERM", gracefulExit);
+
+process.on('SIGTERM', cleanup);
+process.on('SIGINT', cleanup);
