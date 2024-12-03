@@ -148,8 +148,8 @@ export class PostgresDatabaseAdapter
 
     async getParticipantsForAccount(userId: UUID): Promise<Participant[]> {
         const { rows } = await this.query(
-            `SELECT id, "userId", "roomId", "last_message_read" 
-            FROM participants 
+            `SELECT id, "userId", "roomId", "last_message_read"
+            FROM participants
             WHERE "userId" = $1`,
             [userId]
         );
@@ -486,7 +486,7 @@ export class PostgresDatabaseAdapter
         userB: UUID;
     }): Promise<Relationship | null> {
         const { rows } = await this.query(
-            `SELECT * FROM relationships 
+            `SELECT * FROM relationships
             WHERE ("userA" = $1 AND "userB" = $2) OR ("userA" = $2 AND "userB" = $1)`,
             [params.userA, params.userB]
         );
@@ -512,17 +512,17 @@ export class PostgresDatabaseAdapter
         // Get the JSON field content as text first
         const sql = `
                 WITH content_text AS (
-                    SELECT 
+                    SELECT
                         embedding,
                         COALESCE(
                             content->$2->>$3,
                             ''
                         ) as content_text
-                    FROM memories 
+                    FROM memories
                     WHERE type = $4
                     AND content->$2->>$3 IS NOT NULL
                 )
-                SELECT 
+                SELECT
                     embedding,
                     levenshtein(
                         $1,
@@ -554,7 +554,7 @@ export class PostgresDatabaseAdapter
         type: string;
     }): Promise<void> {
         await this.query(
-            `INSERT INTO logs (body, "userId", "roomId", type) 
+            `INSERT INTO logs (body, "userId", "roomId", type)
             VALUES ($1, $2, $3, $4)`,
             [params.body, params.userId, params.roomId, params.type]
         );
@@ -642,7 +642,7 @@ export class PostgresDatabaseAdapter
 
             // Proceed to add the participant if they do not exist
             await this.query(
-                `INSERT INTO participants (id, "userId", "roomId") 
+                `INSERT INTO participants (id, "userId", "roomId")
                 VALUES ($1, $2, $3)`,
                 [v4(), userId, roomId]
             );
@@ -744,7 +744,7 @@ export class PostgresDatabaseAdapter
 
     async getActorDetails(params: { roomId: string }): Promise<Actor[]> {
         const sql = `
-            SELECT 
+            SELECT
                 a.id,
                 a.name,
                 a.username,
@@ -771,14 +771,39 @@ export class PostgresDatabaseAdapter
         agentId: UUID;
     }): Promise<string | undefined> {
         try {
-            const sql = `SELECT "value"::TEXT FROM cache WHERE "key" = $1 AND "agentId" = $2`;
-            const { rows } = await this.query<{ value: string }>(sql, [
+            // Modified query to handle jsonb type properly
+            const sql = `SELECT value FROM cache WHERE "key" = $1 AND "agentId" = $2`;
+            const { rows } = await this.query<{ value: any }>(sql, [
                 params.key,
                 params.agentId,
             ]);
-            return rows[0]?.value ?? undefined;
+
+            if (rows.length === 0) {
+                elizaLogger.debug("Cache miss for key:", params.key);
+                return undefined;
+            }
+
+            // Handle jsonb value properly
+            const value = rows[0].value;
+            if (typeof value === 'object') {
+                return JSON.stringify(value);
+            }
+
+            return value?.toString();
+
         } catch (error) {
-            elizaLogger.log("Error fetching cache", error);
+            elizaLogger.error("Error fetching cache:", {
+                error: error instanceof Error ? {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name
+                } : error,
+                params: {
+                    key: params.key,
+                    agentId: params.agentId
+                }
+            });
+
             return undefined;
         }
     }
