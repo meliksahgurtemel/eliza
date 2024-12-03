@@ -450,24 +450,54 @@ export async function startAgent(character: Character, directClient) {
     }
 }
 
-const startAgents = async () => {
-    const directClient = await DirectClientInterface.start();
-    const args = parseArguments();
-
-    let charactersArg = args.characters || args.character;
-
-    let characters = [defaultCharacter];
-
-    if (charactersArg) {
-        characters = await loadCharacters(charactersArg);
+// Shared cleanup function
+async function cleanupDatabase() {
+    if (globalDb) {
+        try {
+            await globalDb.close();
+            globalDb = undefined; // Clear the reference after closing
+            elizaLogger.info("Database connection closed successfully");
+        } catch (closeError) {
+            elizaLogger.error("Error closing database connection:", closeError);
+        }
     }
+}
 
+// Update process handlers
+process.on('SIGTERM', () => cleanup('SIGTERM'));
+process.on('SIGINT', () => cleanup('SIGINT'));
+process.on('SIGUSR2', () => cleanup('SIGUSR2')); // Handle nodemon restarts
+process.on('beforeExit', () => cleanup('beforeExit'));
+process.on('exit', () => cleanup('exit'));
+
+// Update error handler in startAgents
+const startAgents = async () => {
     try {
+        const directClient = await DirectClientInterface.start();
+        const args = parseArguments();
+        let charactersArg = args.characters || args.character;
+        let characters = charactersArg ? await loadCharacters(charactersArg) : [defaultCharacter];
+
         for (const character of characters) {
             await startAgent(character, directClient);
         }
+
+        function chat() {
+            const agentId = characters[0].name ?? "Agent";
+            rl.question("You: ", async (input) => {
+                await handleUserInput(input, agentId);
+                if (input.toLowerCase() !== "exit") {
+                    chat();
+                }
+            });
+        }
+
+        elizaLogger.log("Chat started. Type 'exit' to quit.");
+        chat();
     } catch (error) {
         elizaLogger.error("Error starting agents:", error);
+        await cleanupDatabase();
+        process.exit(1);
     }
 
     function chat() {
