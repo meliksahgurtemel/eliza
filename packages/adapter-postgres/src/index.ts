@@ -36,6 +36,7 @@ export class PostgresDatabaseAdapter
     implements IDatabaseCacheAdapter
 {
     private pool: Pool;
+    private isConnected: boolean = false;
     private readonly maxRetries: number = 3;
     private readonly baseDelay: number = 1000; // 1 second
     private readonly maxDelay: number = 10000; // 10 seconds
@@ -53,12 +54,13 @@ export class PostgresDatabaseAdapter
         const defaultConfig = {
             max: 20,
             idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: this.connectionTimeout,
+            connectionTimeoutMillis: 10000, // Increased timeout
+            application_name: 'eliza_agent', // Add application name for better monitoring
         };
 
         this.pool = new pg.Pool({
             ...defaultConfig,
-            ...connectionConfig, // Allow overriding defaults
+            ...connectionConfig,
         });
 
         this.pool.on("error", (err) => {
@@ -67,7 +69,6 @@ export class PostgresDatabaseAdapter
         });
 
         this.setupPoolErrorHandling();
-        this.testConnection();
     }
 
     private setupPoolErrorHandling() {
@@ -177,6 +178,9 @@ export class PostgresDatabaseAdapter
         queryTextOrConfig: string | QueryConfig<I>,
         values?: QueryConfigValues<I>
     ): Promise<QueryResult<R>> {
+        if (!this.isConnected) {
+            await this.testConnection();
+        }
         return this.withDatabase(async () => {
             return await this.pool.query(queryTextOrConfig, values);
         }, "query");
@@ -184,38 +188,14 @@ export class PostgresDatabaseAdapter
 
     async init() {
         await this.testConnection();
-
-        const client = await this.pool.connect();
-        try {
-            await client.query("BEGIN");
-
-            // Check if schema already exists (check for a core table)
-            const { rows } = await client.query(`
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables
-                    WHERE table_name = 'rooms'
-                );
-            `);
-
-            if (!rows[0].exists) {
-                const schema = fs.readFileSync(
-                    path.resolve(__dirname, "../schema.sql"),
-                    "utf8"
-                );
-                await client.query(schema);
-            }
-
-            await client.query("COMMIT");
-        } catch (error) {
-            await client.query("ROLLBACK");
-            throw error;
-        } finally {
-            client.release();
-        }
+        this.isConnected = true;
     }
 
     async close() {
-        await this.pool.end();
+        if (this.isConnected) {
+            await this.pool.end();
+            this.isConnected = false;
+        }
     }
 
     async testConnection(): Promise<boolean> {

@@ -413,8 +413,9 @@ function intializeDbCache(character: Character, db: IDatabaseCacheAdapter) {
     return cache;
 }
 
-async function startAgent(character: Character, directClient) {
-    let db: IDatabaseAdapter & IDatabaseCacheAdapter;
+let globalDb: IDatabaseAdapter & IDatabaseCacheAdapter;
+
+export async function startAgent(character: Character, directClient) {
     try {
         character.id ??= stringToUuid(character.name);
         character.username ??= character.name;
@@ -426,18 +427,17 @@ async function startAgent(character: Character, directClient) {
             fs.mkdirSync(dataDir, { recursive: true });
         }
 
-        db = initializeDatabase(dataDir) as IDatabaseAdapter &
-            IDatabaseCacheAdapter;
+        // Initialize database if not already initialized
+        if (!globalDb) {
+            globalDb = initializeDatabase(dataDir) as IDatabaseAdapter & IDatabaseCacheAdapter;
+            await globalDb.init();
+        }
 
-        await db.init();
-
-        const cache = intializeDbCache(character, db);
-        const runtime = createAgent(character, db, cache, token);
+        const cache = intializeDbCache(character, globalDb);
+        const runtime = createAgent(character, globalDb, cache, token);
 
         await runtime.initialize();
-
         const clients = await initializeClients(character, runtime);
-
         directClient.registerAgent(runtime);
 
         return clients;
@@ -446,10 +446,6 @@ async function startAgent(character: Character, directClient) {
             `Error starting agent for character ${character.name}:`,
             error
         );
-        console.error(error);
-        if (db) {
-            await db.close();
-        }
         throw error;
     }
 }
@@ -490,9 +486,45 @@ const startAgents = async () => {
     }
 };
 
-startAgents().catch((error) => {
+// Add connection state tracking
+let isShuttingDown = false;
+
+// Update cleanup handler
+const cleanup = async (signal?: string) => {
+    if (isShuttingDown) {
+        return;
+    }
+
+    isShuttingDown = true;
+    elizaLogger.info(`Cleaning up... ${signal ? `Signal: ${signal}` : ''}`);
+
+    try {
+        if (globalDb) {
+            await globalDb.close();
+            elizaLogger.info("Database connection closed successfully");
+        }
+    } catch (error) {
+        elizaLogger.error("Error during cleanup:", error);
+    }
+
+    // Only exit if explicitly requested
+    if (signal) {
+        process.exit(0);
+    }
+};
+
+// Update process handlers
+process.on('SIGTERM', () => cleanup('SIGTERM'));
+process.on('SIGINT', () => cleanup('SIGINT'));
+process.on('beforeExit', () => cleanup('beforeExit'));
+
+// Update the main error handler
+startAgents().catch(async (error) => {
     elizaLogger.error("Unhandled error in startAgents:", error);
-    process.exit(1); // Exit the process after logging
+    if (!isShuttingDown) {
+        await cleanup();
+        process.exit(1);
+    }
 });
 
 const rl = readline.createInterface({
