@@ -1,4 +1,4 @@
-[@ai16z/eliza v0.1.5-alpha.0](../index.md) / GenerationOptions
+[@ai16z/eliza v0.1.5-alpha.5](../index.md) / GenerationOptions
 
 # Interface: GenerationOptions
 
@@ -12,7 +12,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1058](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1058)
+[packages/core/src/generation.ts:1073](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1073)
 
 ***
 
@@ -22,7 +22,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1059](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1059)
+[packages/core/src/generation.ts:1074](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1074)
 
 ***
 
@@ -32,7 +32,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1060](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1060)
+[packages/core/src/generation.ts:1075](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1075)
 
 ***
 
@@ -42,7 +42,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1061](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1061)
+[packages/core/src/generation.ts:1076](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1076)
 
 ***
 
@@ -52,7 +52,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1062](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1062)
+[packages/core/src/generation.ts:1077](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1077)
 
 ***
 
@@ -62,7 +62,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1063](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1063)
+[packages/core/src/generation.ts:1078](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1078)
 
 ***
 
@@ -72,7 +72,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1064](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1064)
+[packages/core/src/generation.ts:1079](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1079)
 
 ***
 
@@ -82,7 +82,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1065](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1065)
+[packages/core/src/generation.ts:1080](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1080)
 
 ***
 
@@ -92,4 +92,4 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1066](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1066)
+[packages/core/src/generation.ts:1081](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/generation.ts#L1081)

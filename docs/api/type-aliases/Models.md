@@ -1,4 +1,4 @@
-[@ai16z/eliza v0.1.5-alpha.0](../index.md) / Models
+[@ai16z/eliza v0.1.5-alpha.5](../index.md) / Models
 
 # Type Alias: Models
 

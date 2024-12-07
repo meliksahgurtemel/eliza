@@ -1,4 +1,4 @@
-[@ai16z/eliza v0.1.5-alpha.0](../index.md) / Client
+[@ai16z/eliza v0.1.5-alpha.5](../index.md) / Client
 
 # Type Alias: Client
 

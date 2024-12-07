@@ -1,4 +1,4 @@
-[@ai16z/eliza v0.1.5-alpha.0](../index.md) / Clients
+[@ai16z/eliza v0.1.5-alpha.5](../index.md) / Clients
 
 # Enumeration: Clients
 
@@ -43,3 +43,13 @@ Available client platforms
 #### Defined in
 
 [packages/core/src/types.ts:604](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/types.ts#L604)
+
+***
+
+### FARCASTER
+
+> **FARCASTER**: `"farcaster"`
+
+#### Defined in
+
+[packages/core/src/types.ts:605](https://github.com/meliksahgurtemel/eliza/blob/main/packages/core/src/types.ts#L605)

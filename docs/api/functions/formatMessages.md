@@ -1,4 +1,4 @@
-[@ai16z/eliza v0.1.5-alpha.0](../index.md) / formatMessages
+[@ai16z/eliza v0.1.5-alpha.5](../index.md) / formatMessages
 
 # Function: formatMessages()
 
