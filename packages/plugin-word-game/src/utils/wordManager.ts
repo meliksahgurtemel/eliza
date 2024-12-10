@@ -10,9 +10,11 @@ export async function getDailyWord(runtime: IAgentRuntime, message: Memory): Pro
   const cached = await runtime.cacheManager.get<{ word: string; setAt: number }>(cacheKey);
 
   if (cached) {
+    elizaLogger.info("Found cached word", cached.word);
     return cached.word;
   }
 
+  elizaLogger.info("No cached word found, setting new word");
   // If no word is set for today, set a new one
   return setDailyWord(runtime, message);
 }
@@ -36,12 +38,10 @@ export async function setDailyWord(runtime: IAgentRuntime, message: Memory): Pro
     setAt: Date.now()
   };
 
-  await runtime.cacheManager.set(cacheKey, wordData, {
-    expires: 24 * 60 * 60 // 24 hours in seconds
-  });
+  await runtime.cacheManager.set(cacheKey, wordData);
 
   elizaLogger.success(
-    "Daily word",
+    "Daily word set",
     wordData.word,
     wordData.setAt
   );
@@ -52,7 +52,7 @@ export async function setDailyWord(runtime: IAgentRuntime, message: Memory): Pro
     agentId: runtime.agentId,
     roomId: message.roomId,
     content: {
-      text: `Daily word set for ${today}`,
+      text: `Daily word set for today`,
       action: "SET_DAILY_WORD",
       wordData
     },
